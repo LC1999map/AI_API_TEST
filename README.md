@@ -59,7 +59,7 @@ python server.py
 
 | 用户名 | 密码 |
 |---|---|
-| liuchuan | lc112233 |
+| liuchuan | lc112233  |
 
 ---
 
@@ -92,7 +92,7 @@ python server.py
 
 `json
 // 请求
-{ "username": "liuchuan", "password": "lc02514" }
+{ "username": "liuchuan", "password": "lc112233" }
 
 // 成功
 { "success": true, "message": "登录成功", "token": "test-token-liuchuan-2026" }
