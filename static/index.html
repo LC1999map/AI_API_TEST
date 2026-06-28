@@ -1,0 +1,218 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STELLAR</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;height:100vh;font-family:'Inter',-apple-system,sans-serif}
+#c{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;display:block}
+.brand{position:fixed;top:28px;right:32px;z-index:15;text-align:right;pointer-events:none}
+.brand .name{font-family:'Inter',sans-serif;font-size:11px;font-weight:300;color:rgba(255,255,255,0.3);letter-spacing:4px;text-transform:uppercase}
+.brand .dot{display:inline-block;width:4px;height:4px;border-radius:50%;background:rgba(167,139,250,0.4);margin-left:8px;vertical-align:middle;animation:brandPulse 2s ease-in-out infinite}
+.brand .line{width:40px;height:0.5px;background:rgba(255,255,255,0.08);margin-top:6px;margin-left:auto}
+@keyframes brandPulse{0%,100%{opacity:0.4}50%{opacity:1}}
+.ov{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;display:flex;justify-content:center;align-items:center;pointer-events:none}
+.card{pointer-events:auto;background:rgba(255,255,255,0.02);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.05);border-radius:12px;padding:28px 26px;width:270px;max-width:75vw}
+.g{margin-bottom:16px}
+.g label{display:block;font-size:9px;font-weight:400;color:rgba(255,255,255,0.25);letter-spacing:3px;text-transform:uppercase;margin-bottom:5px}
+.g input{width:100%;padding:11px 13px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);border-radius:8px;color:#fff;font-size:12px;font-family:'Inter',sans-serif;outline:none;transition:all .2s;font-weight:300}
+.g input:focus{border-color:rgba(255,255,255,0.1);background:rgba(255,255,255,0.04)}
+.g input::placeholder{color:rgba(255,255,255,0.05);font-weight:200}
+.btn{width:100%;padding:11px;border:none;border-radius:8px;background:rgba(255,255,255,0.06);color:#fff;font-size:11px;font-weight:400;cursor:pointer;transition:all .2s;letter-spacing:2px;font-family:'Inter',sans-serif;border:1px solid rgba(255,255,255,0.03)}
+.btn:hover{background:rgba(255,255,255,0.1)}
+.btn.loading{opacity:.4;pointer-events:none}
+.btn .sp{display:none;width:12px;height:12px;border:1.5px solid rgba(255,255,255,0.15);border-top-color:#fff;border-radius:50%;animation:sp .5s linear infinite;margin:0 auto}
+.btn.loading .sp{display:block}.btn.loading .bt{display:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.msg{font-size:10px;text-align:center;margin-top:8px;min-height:12px;opacity:0;font-weight:300}
+.msg.show{opacity:1}.er{color:#f87171}.ok{color:#34d399}
+.wl{position:fixed;top:0;left:0;right:0;bottom:0;z-index:20;display:none;justify-content:center;align-items:center;background:rgba(0,0,0,0.2);backdrop-filter:blur(30px);animation:fi .5s}
+.wl.show{display:flex}.wb{text-align:center;padding:30px}
+.wb h2{font-size:26px;color:#fff;font-weight:200;letter-spacing:3px}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="brand"><div class="name">Liu Chuan<span class="dot"></span></div><div class="line"></div></div>
+<div class="ov"><div class="card">
+<div class="g"><label>Username</label><input type="text" id="un" placeholder="username" autocomplete="off"></div>
+<div class="g"><label>Password</label><input type="password" id="pw" placeholder="password"></div>
+<button class="btn" id="lb" onclick="login()"><span class="bt">Sign in</span><div class="sp"></div></button>
+<div class="msg er" id="em"></div><div class="msg ok" id="sm"></div>
+</div></div>
+<div class="wl" id="wl"><div class="wb"><h2>WELCOME</h2></div></div>
+
+<script type="module">
+import * as THREE from 'three';
+console.log('Three.js loaded');
+
+var container = document.getElementById('c');
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
+camera.position.set(0, 10, 420);
+
+var renderer = new THREE.WebGLRenderer({antialias:true, alpha:true, canvas:container});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000000, 0);
+
+var N = 50000;
+var geo = new THREE.BufferGeometry();
+var pos = new Float32Array(N * 3);
+var col = new Float32Array(N * 3);
+var sz = new Float32Array(N);
+
+var pData = [];
+
+for (var i = 0; i < N; i++) {
+  // 所有粒子均匀分布在3条旋臂上
+  var r = 10 + Math.pow(Math.random(), 0.5) * 350;
+  var arm = Math.floor(Math.random() * 3);
+  var aa = (arm / 3) * Math.PI * 2;
+  var sw = (r / 350) * 10 + Math.sin(r * 0.04) * 0.6;
+  var sc = (Math.random() - 0.5) * (0.8 + r * 0.002);
+  var a = aa + sw + sc;
+
+  var yBase = (Math.random() - 0.5) * 2;
+  pData.push({r:r, a:a, spd:0.0005+Math.random()*0.002, yBase:yBase});
+
+  var tilt = 0.12;
+  var ct = Math.cos(tilt), st = Math.sin(tilt);
+  var x = Math.cos(a) * r;
+  var z = Math.sin(a) * r;
+  var y = yBase + Math.sin(a*2 + r*0.03) * (r/350) * 2;
+  pos[i*3] = x;
+  pos[i*3+1] = y * ct - z * st;
+  pos[i*3+2] = y * st + z * ct;
+
+    // 白/蓝 随机分布
+  var color;
+  if (Math.random() < 0.08) {
+    var b = 0.7 + Math.random() * 0.3;
+    color = new THREE.Color(b, b*0.92, b);
+  } else {
+    color = new THREE.Color(0.2+Math.random()*0.3, 0.15+Math.random()*0.25, 0.7+Math.random()*0.3);
+  }
+  color.multiplyScalar(0.5 + Math.random() * 0.5);
+  col[i*3] = color.r;
+  col[i*3+1] = color.g;
+  col[i*3+2] = color.b;
+  sz[i] = 0.3 + Math.random() * 1.5;
+}
+
+geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+geo.setAttribute('size', new THREE.BufferAttribute(sz, 1));
+
+var mat = new THREE.PointsMaterial({
+  size: 1.2, vertexColors: true, transparent: true, opacity: 0.9,
+  blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+});
+var galaxy = new THREE.Points(geo, mat);
+scene.add(galaxy);
+
+// 背景星
+var bgN = 5000;
+var bgGeo = new THREE.BufferGeometry();
+var bgPos = new Float32Array(bgN * 3);
+for (var i = 0; i < bgN; i++) {
+  bgPos[i*3] = (Math.random()-0.5)*2000;
+  bgPos[i*3+1] = (Math.random()-0.5)*2000;
+  bgPos[i*3+2] = (Math.random()-0.5)*2000-400;
+}
+bgGeo.setAttribute('position', new THREE.BufferAttribute(bgPos, 3));
+var bgMat = new THREE.PointsMaterial({
+  color:0x444466, size:0.3, transparent:true, opacity:0.4,
+  blending:THREE.AdditiveBlending, depthWrite:false, sizeAttenuation:true
+});
+var bg = new THREE.Points(bgGeo, bgMat);
+scene.add(bg);
+
+// 鼠标拖拽
+var rx=0, ry=0, trx=0, try_=0;
+var drag=false, pmx=0, pmy=0, autoR=true;
+
+container.addEventListener('mousedown', function(e){drag=true;pmx=e.clientX;pmy=e.clientY;autoR=false;});
+container.addEventListener('mousemove', function(e){
+  if(drag){try_+=(e.clientX-pmx)*0.005;trx+=(e.clientY-pmy)*0.005;pmx=e.clientX;pmy=e.clientY;}
+});
+container.addEventListener('mouseup', function(){drag=false;setTimeout(function(){autoR=true;},2000);});
+container.addEventListener('touchstart', function(e){drag=true;pmx=e.touches[0].clientX;pmy=e.touches[0].clientY;autoR=false;},{passive:true});
+container.addEventListener('touchmove', function(e){
+  if(drag){try_+=(e.touches[0].clientX-pmx)*0.005;trx+=(e.touches[0].clientY-pmy)*0.005;pmx=e.touches[0].clientX;pmy=e.touches[0].clientY;}
+},{passive:true});
+container.addEventListener('touchend', function(){drag=false;setTimeout(function(){autoR=true;},2000);});
+
+var minZ=200, maxZ=800;
+window.addEventListener('wheel', function(e){
+  camera.position.z += e.deltaY * 0.5;
+  camera.position.z = Math.max(minZ, Math.min(maxZ, camera.position.z));
+}, {passive: true});
+
+window.addEventListener('resize', function(){
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(autoR) try_ += 0.003;
+  rx += (trx - rx) * 0.05;
+  ry += (try_ - ry) * 0.05;
+
+  var posAttr = geo.attributes.position.array;
+  var tilt = 0.12, ct = Math.cos(tilt), st = Math.sin(tilt);
+  for (var i = 0; i < N; i++) {
+    var d = pData[i];
+    d.a += d.spd;
+    var x = Math.cos(d.a) * d.r;
+    var z = Math.sin(d.a) * d.r;
+    var y = d.yBase + Math.sin(d.a*2 + d.r*0.03) * (d.r/350) * 2;
+    var i3 = i*3;
+    posAttr[i3] = x;
+    posAttr[i3+1] = y * ct - z * st;
+    posAttr[i3+2] = y * st + z * ct;
+  }
+  geo.attributes.position.needsUpdate = true;
+
+  galaxy.rotation.x = rx * 0.3;
+  galaxy.rotation.y = ry;
+  bg.rotation.y = ry * 0.2;
+  renderer.render(scene, camera);
+}
+animate();
+console.log('Galaxy ready:', N, 'particles');
+
+window.login = async function(){
+  var u=document.getElementById('un').value.trim();
+  var p=document.getElementById('pw').value.trim();
+  var b=document.getElementById('lb');
+  var em=document.getElementById('em'),sm=document.getElementById('sm');
+  em.classList.remove('show');em.textContent='';
+  sm.classList.remove('show');sm.textContent='';
+  if(!u||!p){em.textContent='Please enter credentials';em.classList.add('show');return;}
+  b.classList.add('loading');
+  try{
+    var r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    var d=await r.json();
+    if(d.success){sm.textContent='Welcome back';sm.classList.add('show');setTimeout(function(){document.getElementById('wl').classList.add('show');},400);}
+    else{em.textContent=d.message;em.classList.add('show');}
+  }catch(e){em.textContent='Connection error';em.classList.add('show');}
+  b.classList.remove('loading');
+};
+document.addEventListener('keydown',function(e){if(e.key==='Enter')login();});
+</script>
+</body>
+</html>
